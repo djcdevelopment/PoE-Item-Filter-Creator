@@ -1,0 +1,433 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+<style>
+
+.actionFilter{
+    border-left-color: #aa6708;
+    margin-top: 12px;
+    border: 1px solid #eee;
+    border-left-width: 5px;
+    border-radius: 3px;
+}
+.actionFilter *{
+    margin:5px;
+}
+
+.actionFilter p{
+    margin:0px;
+}
+
+.filterRange{
+    width:90px;
+}
+.filterDescription{
+    padding: 1px 5px;
+    font-size: smaller;
+}
+
+.btn-flat {
+    filter:progid:DXImageTransform.Microsoft.Gradient(enabled='false');
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    background-image:none;
+    border:0;
+}
+
+</style>
+
+
+</head>
+
+<body>
+
+  <div class="container-fluid">
+
+    <div class="">
+        <h1>Prototype loot filter creator for Path of the Exile</h1>
+
+        <p>A slightly automated version of the scripting knowledge gained from <a href="http://pathofexile.gamepedia.com/Item_filter_guide">This wiki link</a></p>
+        <div class="alert alert-danger">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span> You'll need this wiki to help create your first filter file <a href="http://pathofexile.gamepedia.com/Item_filter_guide">Creating your filter file</a></span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-6">
+            <table id="filterTable" class="table table-striped">
+                <tr>
+                    <th>Order</th>
+                    <th>Filter</th>
+                </tr>
+            </table>
+
+            <textarea id="finalScript" cols="40" rows="15">
+
+            </textarea>
+        </div>
+        <div class="col-xs-6">
+			<div class="panel panel-default">
+				<div class="panel-heading">Create a Filter</div>
+				<div class="panel-body" id="filterContainer">
+					
+				</div>
+			</div>			
+            
+        </div>
+    </div>
+      
+  </div>
+
+
+</body>
+</html>
+
+
+<script type="text/javascript">
+
+    
+    $(function () {
+        //globals these should come from an API but currently copied from 
+        //http://pathofexile.gamepedia.com/Item_filter_guide
+
+        var operators = ['<', '<=', '>', '>=', '='];
+        var classTypes = [
+            "Life Flask",
+            "Mana Flask",
+            "Hybrid Flask",
+            "Currency",
+            "Amulet",
+            "Ring",
+            "Claw",
+            "Dagger",
+            "Wand",
+            "One Hand Sword",
+            "Thrusting One Hand Sword",
+            "One Hand Axe",
+            "One Hand Mace",
+            "Bow",
+            "Staves",
+            "Two Hand Swords",
+            "Two Hand Axes",
+            "Two Hand Maces",
+            "Active Skill Gems",
+            "Support Skill Gems",
+            "Quivers",
+            "Belt",
+            "Gloves",
+            "Boots",
+            "Body Armours",
+            "Helmets",
+            "Shields",
+            "Stackable Currency",
+            "Quest Items",
+            "Sceptres",
+            "Utility Flasks",
+            "Maps",
+            "Fishing Rods",
+            "Map Fragments",
+            "Hideout Doodads",
+            "Microtransactions",
+            "Jewel",
+            "Card"];
+
+        //ItemLevel [Operator] <Level>	Numeric Level (0-100)	The item level the item was generated at.
+        //DropLevel [Operator] <Level>	Numeric Level (0-100)	The level that the item starts dropping at.
+        //Quality [Operator] <Quality>	Numeric Quality (0-20)	The amount of quality on the item.
+        //Rarity [Operator] <Rarity>	Normal, Magic, Rare, Unique	Rarity of the item.
+        //Class	<Class>	Full or partial item class name	The item class. Specifying part of a class name is allowed and will match any classes with that text in the name. So for example "One Hand" will match both "One Hand Sword" and "One Hand Axe"
+        //TODO --- BaseType <Type>	Full or partial item name	The base type of the item. Specifying a part of a base type name is allowed and will match any of the base types with that text in the name.
+        //Sockets [Operator] <Sockets>	Numeric Number of Sockets (0-6)	Total number of sockets that the item has.
+        //LinkedSockets [Operator] <Links>	Numeric Number of Links (0, 2-6)	The size of the largest group of linked sockets that the item has.
+        //SocketGroup [Group]	R, G, B, W	A group of linked sockets that contains the specified combination. Each letter is short-hand for the colour (i.e. Red = R). For example, RRG will match any group that contains two red sockets linked with a green socket.
+        //TODO --- Height [Operator] <Value>	Numeric number of slots (1-4)	The number of slots the item takes on the Y-axis (verical axis), i.e. the height of the item. [1]
+        //TODO --- Width [Operator] <Value>	Numeric number of slots (1-2)	The number of slots the item takes on the X-axis (horizontal axis), i.e. the width of the item.
+
+        var filterTypes = [
+            {
+                "name": "ItemLevel",
+                "operators": operators,
+                "values": {
+                    "type": "range",
+                    "min": 0,
+                    "max": 100
+                },
+                "description": "The item level the item was generated at."
+
+            },
+            {
+                "name": "DropLevel",
+                "operators": operators,
+                "values": {
+                    "type": "range",
+                    "min": 0,
+                    "max": 100
+                },
+                "description": "The level that the item starts dropping at."
+
+            },
+            {
+                "name": "Quality",
+                "operators": operators,
+                "values": {
+                    "type": "range",
+                    "min": 0,
+                    "max": 20
+                },
+                "description": "The amount of quality on the item. eg. 15%"
+            },
+            {
+                "name": "Rarity",
+                "operators": operators,
+                "values": {
+                    "type": "list",
+                    "list": ['Normal', 'Magic', 'Rare', 'Unique']
+                },
+                "description": "Normal, Magic, Rare, Unique	Rarity of the item."
+            },
+            {
+                "name": "Sockets",
+                "operators": operators,
+                "values": {
+                    "type": "range",
+                    "min": 0,
+                    "max": 6
+                },
+                "description": "Numeric Number of Sockets (0-6)	Total number of sockets that the item has."
+            },
+            {
+                "name": "LinkedSockets",
+                "operators": operators,
+                "values": {
+                    "type": "range",
+                    "min": 0,
+                    "max": 6
+                },
+                "description": "Numeric Number of Sockets (0-6)	Total number of sockets that the item has."
+            },
+            {
+                "name": "SocketGroup",
+                "operators": null,
+                "values": {
+                    "type": "freeform",
+                    "value": "RGB"
+                },
+                "description": "A group of linked sockets that contains the specified combination. Each letter is short-hand for the colour (i.e. Red = R). For example, RRG will match any group that contains two red sockets linked with a green socket."
+            },
+            {
+                "name": "Class",
+                "operators": null,
+                "values": {
+                    "type": "list",
+                    "list": classTypes
+                },
+                "description": "A group of linked sockets that contains the specified combination. Each letter is short-hand for the colour (i.e. Red = R). For example, RRG will match any group that contains two red sockets linked with a green socket."
+            },
+
+        ];
+
+        //SetBorderColor <Red> <Green> <Blue> [Alpha]	0-255	Sets the border colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255
+        //SetTextColor <Red> <Green> <Blue> [Alpha]	0-255	Sets the text colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255; refer to color table below for examples of in-game values
+        //SetBackgroundColor <Red> <Green> <Blue> [Alpha]	0-255	Sets the colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255; default in-game value is 0 0 0 240
+        //PlayAlertSound <Id> [Volume]	1-9 [0-300]	Plays the specified Alert Sound with optional volume when dropped. Only one sound can be played at a time.
+        //SetFontSize <FontSize>	18-45 (default: 32)	Sets the font-size of item tex
+
+        var actions = [
+            {
+                "name": "SetBorderColor",
+                "values": {
+                    "type": "color",
+                    "value": [0, 0, 255]
+                },
+                "description": "<Green> <Blue> [Alpha]	0-255	Sets the border colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255"
+            },
+            {
+                "name": "SetTextColor",
+                "values": {
+                    "type": "color",
+                    "value": [0, 0, 255]
+                },
+                "description": "<Red> <Green> <Blue> [Alpha]	0-255	Sets the text colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255; refer to color table below for examples of in-game values"
+            },
+            {
+                "name": "SetBackgroundColor",
+                "values": {
+                    "type": "color",
+                    "value": [0, 0, 255]
+                },
+                "description": "<Red> <Green> <Blue> [Alpha]	0-255	Sets the colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255; default in-game value is 0 0 0 240"
+            },
+            {
+                "name": "PlayAlertSound",
+                "values": {
+                    "type": "combo",
+                    "ranges": [
+                        {
+                            "name": "id",
+                            "type": "range",
+                            "min": 1,
+                            "max": 9
+                        },
+                        {
+                            "name": "volume",
+                            "type": "range",
+                            "min": 0,
+                            "max": 300
+                        }]
+                },
+                "description": "<Red> <Green> <Blue> [Alpha]	0-255	Sets the colour of the item box in RGB values from 0-255 with optional Alpha (opacity) value of 0-255; default in-game value is 0 0 0 240"
+            },
+            {
+                "name": "SetFontSize",
+                "values": {
+                    "type": "range",
+                    "min": 18,
+                    "max": 45
+                },
+                "description": "18-45 (default: 32)	Sets the font-size of item text"
+            },
+        ];
+
+        var operatorsListHTML = '<select class="operatorsList filterOption">' +
+                                    '<option value="<"><</option>' +
+                                    '<option value="<="><=</option>' +
+                                    '<option value="=">=</option>' +
+                                    '<option value=">">></option>' +
+                                    '<option value=">="><=</option>' +
+                                '</select>'
+
+        var scriptHeader = "";
+        var scriptFooter = "";
+        Init();
+
+        function Init() {
+
+            $('#filterContainer').html(buildFilters(filterTypes));
+
+            //setup listeners
+            $('#filterContainer').on('click', '.addFilter', function () {
+                var filterOrder = "";
+                var filterText = "";
+                var curHTML = "";
+
+				filterOrder = $('#filterTable').find('tr').length;
+				options = $(this).parent().find('.filterOption');
+
+                //super ghetto, but i'm getting tired and just want this to work
+                //this should be saved as a data object attached to the actionfilter html to save this reverse building
+                filterText = "";
+
+                options.each(function (option) {
+                    
+                    filterText += getVal(options[option]) + " ";
+                })
+                
+                curHTML = '<tr><td>'+ filterOrder +'</td> <td>' + filterText + '</td> </tr>';
+
+                $('#filterTable').find('tbody').append(curHTML);
+            });
+
+        }
+
+        function getVal(option) {
+
+            if (option.tagName === "SPAN"){
+                return option.innerHTML;
+            }
+            if (option.tagName === "SELECT") {
+                return option.value;
+            }
+            if (option.tagName === "INPUT") {
+                return option.value;
+            }
+
+            return "";
+        }
+
+        function buildFilters(filters) {
+            var curFilter = "";
+            var filtersHTML = "";
+
+            filters.forEach(function (filter) {
+
+                //open filter block
+                curFilter = '<div class="actionFilter" >';
+
+                //set filter name
+                curFilter += '<span class="actionName filterOption">' + filter.name + '</span>';
+
+                //most filters use <=, =, > else they are free form
+                if (filter.operators !== null) {
+                    curFilter += operatorsListHTML;
+                }
+
+                //create input and range tooltip or list values
+                curFilter += buildValues(filter);
+
+                //add button
+                curFilter += '<button type="button" class="addFilter btn btn-flat btn-primary btn-xs pull-right">' +
+                                '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add to filter' +
+                             '</button>'
+
+                //add filter description
+                curFilter += '<p class="filterDescription bg-warning">' + filter.description + ' <p>';
+
+                //close filter block
+                curFilter += '</div>';
+
+                //add filter to finished HTML list
+                filtersHTML += curFilter;
+
+            });
+            
+            return filtersHTML;
+
+
+            function buildValues(filter){
+                var output = "";
+                var tempOption = "";
+                
+                if (filter.values.type === "range")
+                    output = '<input class="filterRange filterOption" /> <span> (Min: ' + filter.values.min + ' - Max: ' + filter.values.max + ') </span>';
+
+                if (filter.values.type === "list") {
+                    //open values html
+                    output = '<select class="filterList filterOption">';
+                    
+                    //add option for each item in list
+                    filter.values.list.forEach(function (listName) {
+                        
+                        tempOption = '<option value="'+ listName +'">'+ listName +' </option>';
+                        output += tempOption;
+                    })
+
+                    //close values html
+                    output += '</select>'
+                }
+
+                if (filter.values.type === "freeform") {
+                    output = '<input class="filterRange filterOption" />';
+                }
+
+                return output;
+            }
+        };
+        
+        
+    });
+
+
+</script>
